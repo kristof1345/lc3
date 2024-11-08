@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 // consts
 const MEMORY_MAX int = int(1 << 16)
@@ -38,9 +41,100 @@ const (
 	OP_TRAP        // execute trap
 )
 
-func main() {
-	memory := [MEMORY_MAX]uint16{} //a 65,536 sized empty array
-	reg := [R_COUNT]uint16{}
+const ( // conditional flags
+	FL_POS = 1 << 0
+	FL_ZRO = 1 << 1
+	FL_NEG = 1 << 2
+)
 
-	fmt.Sprintln(memory, reg) // just to make gopls shut up
+var (
+	memory = make([]uint16, MEMORY_MAX) //a 65,536 sized empty array
+	reg    = [R_COUNT]uint16{}
+)
+
+func memRead(address uint16) uint16 {
+	if int(address) < len(memory) {
+		return memory[address]
+	}
+	return 0
+}
+
+func main() {
+	args := os.Args
+	if len(args) < 2 {
+		// show usage string
+		fmt.Println("lc3 [image-file1] ...")
+		os.Exit(2)
+	}
+
+	for i := 0; i < len(args); i++ {
+		// check if we can read image
+	}
+
+	reg[R_COND] = FL_ZRO
+
+	// setting PC to default position
+	PC_START := 0x3000
+	reg[R_PC] = uint16(PC_START)
+
+	running := true
+	for running {
+		// fetch
+		instr := memRead(reg[R_PC])
+		reg[R_PC]++
+		op := instr >> 12
+
+		switch op {
+		case OP_ADD:
+			// add
+			break
+		case OP_AND:
+			// and
+			break
+		case OP_NOT:
+			// not
+			break
+		case OP_BR:
+			// br
+			break
+		case OP_JMP:
+			// jump
+			break
+		case OP_JSR:
+			// jsr
+			break
+		case OP_LD:
+			// ld
+			break
+		case OP_LDI:
+			// ldi
+			break
+		case OP_LDR:
+			// ldr
+			break
+		case OP_LEA:
+			// lea
+			break
+		case OP_ST:
+			// st
+			break
+		case OP_STI:
+			// sti
+			break
+		case OP_STR:
+			// str
+			break
+		case OP_TRAP:
+			// trap
+			break
+		case OP_RES:
+		case OP_RTI:
+		default:
+			// bad opcode
+			break
+		}
+
+	}
+
+	fmt.Sprintln("shutty down") // just to make gopls shut up
 }
