@@ -59,6 +59,10 @@ func memRead(address uint16) uint16 {
 	return 0
 }
 
+func readImage(path string) bool {
+	return true
+}
+
 func main() {
 	args := os.Args
 	if len(args) < 2 {
@@ -68,7 +72,10 @@ func main() {
 	}
 
 	for i := 0; i < len(args); i++ {
-		// check if we can read image
+		if !readImage(args[i]) {
+			fmt.Printf("failed to load image: %s", args[i])
+			os.Exit(1)
+		}
 	}
 
 	reg[R_COND] = FL_ZRO
