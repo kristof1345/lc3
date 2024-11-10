@@ -111,7 +111,18 @@ func main() {
 
 		switch op {
 		case OP_ADD:
-			// add
+			r0 := (instr >> 9) & 0x7
+			r1 := (instr >> 6) & 0x7
+			immFlag := (instr >> 5) & 0x1
+
+			if immFlag == 1 {
+				imm5 := signExtend(instr&0x1F, 5)
+				reg[r0] = reg[r1] + imm5
+			} else {
+				r2 := instr & 0x7
+				reg[r0] = reg[r1] + reg[r2]
+			}
+			updateFlags(r0)
 			break
 		case OP_AND:
 			// and
