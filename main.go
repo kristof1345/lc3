@@ -52,6 +52,24 @@ var (
 	reg    = [R_COUNT]uint16{}
 )
 
+func updateFlags(r uint16) {
+	if reg[r] == 0 {
+		reg[R_COND] = FL_ZRO
+	} else if reg[r]>>15 != 0 { // a '1' in the left-most bit indicates a negative. we get there by bitshiting with 15 becuaes it has 16 bits
+		reg[R_COND] = FL_NEG
+	} else {
+		reg[R_COND] = FL_POS
+	}
+}
+
+func signExtend(x uint16, bitCount int) uint16 {
+	x = x & ((1 << bitCount) - 1)
+	if (x>>(bitCount-1))&1 != 0 {
+		x |= (0xFFFF) << bitCount
+	}
+	return x
+}
+
 func memRead(address uint16) uint16 {
 	if int(address) < len(memory) {
 		return memory[address]
