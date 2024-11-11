@@ -125,13 +125,32 @@ func main() {
 			updateFlags(r0)
 			break
 		case OP_AND:
-			// and
+			r0 := (instr >> 9) & 0x7
+			r1 := (instr >> 6) & 0x7
+			immFlag := (instr >> 5) & 0x1
+
+			if immFlag == 0 {
+				r2 := instr & 0x7
+				reg[r0] = reg[r1] & reg[r2]
+			} else {
+				imm5 := signExtend(instr&0x1F, 5)
+				reg[r0] = reg[r1] & imm5
+			}
+			updateFlags(r0)
 			break
 		case OP_NOT:
-			// not
+			r0 := (instr >> 9) & 0x7
+			r1 := (instr >> 6) & 0x7
+
+			reg[r0] = ^reg[r1] // ^ is the nitwise XOR
+			updateFlags(r0)
 			break
 		case OP_BR:
-			// br
+			pcOffset := signExtend(instr&0x1FF, 9)
+			condFlag := (instr >> 9) & 0x7
+			if condFlag&reg[R_COND] != 0 {
+				reg[R_PC] += pcOffset
+			}
 			break
 		case OP_JMP:
 			// jump
@@ -143,7 +162,10 @@ func main() {
 			// ld
 			break
 		case OP_LDI:
-			// ldi
+			r0 := (instr >> 9) & 0x7
+			pcOffset := signExtend(instr&0x1FF, 9)
+			reg[r0] = memRead(memRead(reg[R_PC] + pcOffset))
+			updateFlags(r0)
 			break
 		case OP_LDR:
 			// ldr
@@ -166,8 +188,7 @@ func main() {
 		case OP_RES:
 		case OP_RTI:
 		default:
-			// bad opcode
-			break
+			panic("bad opcode")
 		}
 
 	}
