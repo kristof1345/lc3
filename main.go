@@ -153,13 +153,25 @@ func main() {
 			}
 			break
 		case OP_JMP:
-			// jump
+			baseR := (instr >> 6) & 0x7
+			reg[R_PC] = baseR
 			break
 		case OP_JSR:
-			// jsr
+			// reg[R_PC]++
+			reg[R_R7] = reg[R_PC]
+			flag := (instr >> 11) & 0x1
+			if flag == 0 {
+				baseR := (instr >> 6) & 0x7
+				reg[R_PC] = baseR
+			} else {
+				reg[R_PC] = reg[R_PC] + signExtend(instr&0x7FF, 11)
+			}
 			break
 		case OP_LD:
-			// ld
+			r0 := (instr >> 9) & 0x7
+			pcOffset := signExtend(instr&0x1FF, 9)
+			reg[r0] = memRead(reg[R_PC] + pcOffset)
+			updateFlags(r0)
 			break
 		case OP_LDI:
 			r0 := (instr >> 9) & 0x7
@@ -168,10 +180,17 @@ func main() {
 			updateFlags(r0)
 			break
 		case OP_LDR:
-			// ldr
+			r0 := (instr >> 9) & 0x7
+			offset := signExtend(instr&0x3F, 6)
+			baseR := (instr >> 6) & 0x7
+			reg[r0] = memRead(baseR + offset)
+			updateFlags(r0)
 			break
 		case OP_LEA:
-			// lea
+			r0 := (instr >> 9) & 0x7
+			pcOffset := signExtend(instr&0x1FF, 9)
+			reg[r0] = reg[R_PC] + pcOffset
+			updateFlags(r0)
 			break
 		case OP_ST:
 			// st
