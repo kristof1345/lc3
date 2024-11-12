@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -75,6 +76,14 @@ func memRead(address uint16) uint16 {
 		return memory[address]
 	}
 	return 0
+}
+
+func memWrite(address uint16, value uint16) {
+	if address <= 65535 {
+		memory[address] = value
+	} else {
+		log.Fatal("cannot write to memory")
+	}
 }
 
 func readImage(path string) bool {
@@ -153,16 +162,15 @@ func main() {
 			}
 			break
 		case OP_JMP:
-			baseR := (instr >> 6) & 0x7
-			reg[R_PC] = baseR
+			r1 := (instr >> 6) & 0x7
+			reg[R_PC] = reg[r1]
 			break
 		case OP_JSR:
-			// reg[R_PC]++
 			reg[R_R7] = reg[R_PC]
-			flag := (instr >> 11) & 0x1
+			flag := (instr >> 11) & 1
 			if flag == 0 {
-				baseR := (instr >> 6) & 0x7
-				reg[R_PC] = baseR
+				r1 := (instr >> 6) & 0x7
+				reg[R_PC] = reg[r1]
 			} else {
 				reg[R_PC] = reg[R_PC] + signExtend(instr&0x7FF, 11)
 			}
@@ -182,8 +190,8 @@ func main() {
 		case OP_LDR:
 			r0 := (instr >> 9) & 0x7
 			offset := signExtend(instr&0x3F, 6)
-			baseR := (instr >> 6) & 0x7
-			reg[r0] = memRead(baseR + offset)
+			r1 := (instr >> 6) & 0x7
+			reg[r0] = memRead(reg[r1] + offset)
 			updateFlags(r0)
 			break
 		case OP_LEA:
@@ -193,13 +201,21 @@ func main() {
 			updateFlags(r0)
 			break
 		case OP_ST:
-			// st
+			r0 := (instr >> 9) & 0x7
+			pcOffset := signExtend(instr&0x1FF, 9)
+			memWrite(reg[R_PC]+pcOffset, reg[r0])
 			break
 		case OP_STI:
-			// sti
+			r0 := (instr >> 9) & 0x7
+			pcOffset := signExtend(instr&0x1FF, 9)
+			address := memRead(reg[R_PC] + pcOffset)
+			memWrite(address, reg[r0])
 			break
 		case OP_STR:
-			// str
+			r0 := (instr >> 9) & 0x7
+			r1 := (instr >> 6) & 0x7
+			offset := signExtend(instr&0x3F, 6)
+			memWrite(reg[r1]+offset, reg[r0])
 			break
 		case OP_TRAP:
 			// trap
