@@ -48,8 +48,18 @@ const ( // conditional flags
 	FL_NEG = 1 << 2
 )
 
+/* trap codes */
+const (
+	TRAP_GETC  = 0x20 + iota /* get character from keyboard, not echoed onto the terminal */
+	TRAP_OUT   = 0x21
+	TRAP_PUTS  = 0x22
+	TRAP_IN    = 0x23
+	TRAP_PUTSP = 0x24
+	TRAP_HALT  = 0x25
+)
+
 var (
-	memory = make([]uint16, MEMORY_MAX) //a 65,536 sized empty array
+	memory = make([]uint16, MEMORY_MAX) // a 65,536 sized empty array
 	reg    = [R_COUNT]uint16{}
 )
 
@@ -132,7 +142,6 @@ func main() {
 				reg[r0] = reg[r1] + reg[r2]
 			}
 			updateFlags(r0)
-			break
 		case OP_AND:
 			r0 := (instr >> 9) & 0x7
 			r1 := (instr >> 6) & 0x7
@@ -146,25 +155,21 @@ func main() {
 				reg[r0] = reg[r1] & imm5
 			}
 			updateFlags(r0)
-			break
 		case OP_NOT:
 			r0 := (instr >> 9) & 0x7
 			r1 := (instr >> 6) & 0x7
 
 			reg[r0] = ^reg[r1] // ^ is the nitwise XOR
 			updateFlags(r0)
-			break
 		case OP_BR:
 			pcOffset := signExtend(instr&0x1FF, 9)
 			condFlag := (instr >> 9) & 0x7
 			if condFlag&reg[R_COND] != 0 {
 				reg[R_PC] += pcOffset
 			}
-			break
 		case OP_JMP:
 			r1 := (instr >> 6) & 0x7
 			reg[R_PC] = reg[r1]
-			break
 		case OP_JSR:
 			reg[R_R7] = reg[R_PC]
 			flag := (instr >> 11) & 1
@@ -174,52 +179,43 @@ func main() {
 			} else {
 				reg[R_PC] = reg[R_PC] + signExtend(instr&0x7FF, 11)
 			}
-			break
 		case OP_LD:
 			r0 := (instr >> 9) & 0x7
 			pcOffset := signExtend(instr&0x1FF, 9)
 			reg[r0] = memRead(reg[R_PC] + pcOffset)
 			updateFlags(r0)
-			break
 		case OP_LDI:
 			r0 := (instr >> 9) & 0x7
 			pcOffset := signExtend(instr&0x1FF, 9)
 			reg[r0] = memRead(memRead(reg[R_PC] + pcOffset))
 			updateFlags(r0)
-			break
 		case OP_LDR:
 			r0 := (instr >> 9) & 0x7
 			offset := signExtend(instr&0x3F, 6)
 			r1 := (instr >> 6) & 0x7
 			reg[r0] = memRead(reg[r1] + offset)
 			updateFlags(r0)
-			break
 		case OP_LEA:
 			r0 := (instr >> 9) & 0x7
 			pcOffset := signExtend(instr&0x1FF, 9)
 			reg[r0] = reg[R_PC] + pcOffset
 			updateFlags(r0)
-			break
 		case OP_ST:
 			r0 := (instr >> 9) & 0x7
 			pcOffset := signExtend(instr&0x1FF, 9)
 			memWrite(reg[R_PC]+pcOffset, reg[r0])
-			break
 		case OP_STI:
 			r0 := (instr >> 9) & 0x7
 			pcOffset := signExtend(instr&0x1FF, 9)
 			address := memRead(reg[R_PC] + pcOffset)
 			memWrite(address, reg[r0])
-			break
 		case OP_STR:
 			r0 := (instr >> 9) & 0x7
 			r1 := (instr >> 6) & 0x7
 			offset := signExtend(instr&0x3F, 6)
 			memWrite(reg[r1]+offset, reg[r0])
-			break
 		case OP_TRAP:
 			// trap
-			break
 		case OP_RES:
 		case OP_RTI:
 		default:
