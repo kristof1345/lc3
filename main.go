@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -48,14 +49,14 @@ const ( // conditional flags
 	FL_NEG = 1 << 2
 )
 
-/* trap codes */
+/* trap routines */
 const (
-	TRAP_GETC  = 0x20 + iota /* get character from keyboard, not echoed onto the terminal */
-	TRAP_OUT   = 0x21
-	TRAP_PUTS  = 0x22
-	TRAP_IN    = 0x23
-	TRAP_PUTSP = 0x24
-	TRAP_HALT  = 0x25
+	TRAP_GETC  = 0x20 /* get character from keyboard, not echoed onto the terminal */
+	TRAP_OUT   = 0x21 /*output a chacarter*/
+	TRAP_PUTS  = 0x22 /* output a word string */
+	TRAP_IN    = 0x23 /* get a character from keyboard, echoed onto the terminal */
+	TRAP_PUTSP = 0x24 /* output a byte string */
+	TRAP_HALT  = 0x25 /* halt a program */
 )
 
 var (
@@ -215,7 +216,35 @@ func main() {
 			offset := signExtend(instr&0x3F, 6)
 			memWrite(reg[r1]+offset, reg[r0])
 		case OP_TRAP:
-			// trap
+			reg[R_R7] = reg[R_PC]
+
+			switch instr & 0xFF {
+			case TRAP_GETC:
+				reader := bufio.NewReader(os.Stdin)
+				char, _, err := reader.ReadRune()
+				if err != nil {
+					panic("tried reading entered char, failed")
+				}
+				reg[R_R0] = uint16(char)
+				updateFlags(R_R0)
+			case TRAP_OUT:
+				// out
+			case TRAP_PUTS:
+				address := reg[R_R0]
+				var chr uint16
+				var i uint16
+				for ok := true; ok; ok = (chr != 0x0) {
+					chr = memory[address+i] & 0xFFFF
+					fmt.Printf("%c", rune(chr))
+					i++
+				}
+			case TRAP_IN:
+				// trap in
+			case TRAP_PUTSP:
+				// trap whatever
+			case TRAP_HALT:
+				// trap halt
+			}
 		case OP_RES:
 		case OP_RTI:
 		default:
