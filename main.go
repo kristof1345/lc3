@@ -228,7 +228,8 @@ func main() {
 				reg[R_R0] = uint16(char)
 				updateFlags(R_R0)
 			case TRAP_OUT:
-				// out
+				char := reg[R_R0]
+				fmt.Printf("%c", rune(char))
 			case TRAP_PUTS:
 				address := reg[R_R0]
 				var chr uint16
@@ -239,11 +240,19 @@ func main() {
 					i++
 				}
 			case TRAP_IN:
-				// trap in
-			case TRAP_PUTSP:
+				fmt.Println("Enter character: ")
+				reader := bufio.NewReader(os.Stdin)
+				char, _, err := reader.ReadRune()
+				if err != nil {
+					panic("tried reading entered char, failed")
+				}
+				reg[R_R0] = uint16(char)
+				updateFlags(R_R0)
+				/* case TRAP_PUTSP: */
 				// trap whatever
 			case TRAP_HALT:
-				// trap halt
+				fmt.Println("HALT")
+				running = false
 			}
 		case OP_RES:
 		case OP_RTI:
