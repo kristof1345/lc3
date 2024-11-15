@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
 	"os"
 )
 
@@ -141,6 +142,11 @@ func readImage(path string) {
 	buffer := bytes.NewBuffer(byteArr)
 
 	// read into mem
+	for i := origin; i < math.MaxUint16; i++ {
+		var val uint16
+		binary.Read(buffer, binary.BigEndian, &val)
+		memory[i] = val
+	}
 }
 
 func main() {
