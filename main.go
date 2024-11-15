@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"golang.org/x/sys/windows"
 	"log"
 	"math"
 	"os"
+	"syscall"
 )
 
 // consts
@@ -62,6 +64,11 @@ const (
 	TRAP_HALT  = 0x25 /* halt a program */
 )
 
+const ( // memory mapped registers - they allow the system to 'sleep' while waiting for user input from the keyboard
+	MR_KBSR = 0xFE00 // 'event listener'
+	MR_KBDR = 0xFE02 // data from keyboard
+)
+
 var (
 	memory = make([]uint16, MEMORY_MAX) // a 65,536 sized empty array
 	reg    = [R_COUNT]uint16{}
@@ -86,8 +93,26 @@ func signExtend(x uint16, bitCount int) uint16 {
 }
 
 func memRead(address uint16) uint16 {
-	if int(address) < len(memory) {
+	if address == MR_KBSR {
+		if peekChar() {
+			char := make([]byte, 1)
+			reader := bufio.NewReader(os.Stdin)
+			n, err := reader.Read(char)
+			if n == 0 || err != nil {
+				panic("couldn't read from I/O")
+			}
+
+			memory[MR_KBSR] = (1 << 15)
+			memory[MR_KBDR] = uint16(char[0])
+		} else {
+			memory[MR_KBSR] = 0
+		}
+	}
+
+	if int(address) <= len(memory) {
 		return memory[address]
+	} else {
+		log.Fatal("unhandled cpu memory read at")
 	}
 	return 0
 }
@@ -100,16 +125,22 @@ func memWrite(address uint16, value uint16) {
 	}
 }
 
-func readImage(path string) {
+func peekChar() bool {
+	reader := bufio.NewReader(os.Stdin)
+	_, err := reader.Peek(1)
+	return err == nil
+}
+
+func readImage(path string) bool {
 	file, err := os.Open(path)
 	if err != nil {
-		return
+		return false
 	}
 	defer file.Close()
 
 	stats, statsErr := file.Stat()
 	if statsErr != nil {
-		return
+		return false
 	}
 
 	// read origin
@@ -118,14 +149,14 @@ func readImage(path string) {
 	headerBytes := make([]byte, 2) // 2 cuz one byte is 8 bits long - we need to read 16 bits
 	_, err = file.Read(headerBytes)
 	if err != nil {
-		return
+		return false
 	}
 
 	headerBuffer := bytes.NewBuffer(headerBytes)
 	// convert to big endian
 	err = binary.Read(headerBuffer, binary.BigEndian, &origin)
 	if err != nil {
-		return
+		return false
 	}
 	log.Printf("Origin memory located: 0x%04X", origin)
 
@@ -136,7 +167,7 @@ func readImage(path string) {
 
 	_, err = file.Read(byteArr)
 	if err != nil {
-		return
+		return false
 	}
 
 	buffer := bytes.NewBuffer(byteArr)
@@ -147,8 +178,11 @@ func readImage(path string) {
 		binary.Read(buffer, binary.BigEndian, &val)
 		memory[i] = val
 	}
+
+	return true
 }
 
+// main function  
 func main() {
 	args := os.Args
 	if len(args) < 2 {
@@ -204,6 +238,7 @@ func main() {
 				reg[r0] = reg[r1] & imm5
 			}
 			updateFlags(r0)
+			break
 		case OP_NOT:
 			r0 := (instr >> 9) & 0x7
 			r1 := (instr >> 6) & 0x7
