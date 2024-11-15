@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
@@ -97,8 +99,48 @@ func memWrite(address uint16, value uint16) {
 	}
 }
 
-func readImage(path string) bool {
-	return true
+func readImage(path string) {
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	stats, statsErr := file.Stat()
+	if statsErr != nil {
+		return
+	}
+
+	// read origin
+	var origin uint16
+
+	headerBytes := make([]byte, 2) // 2 cuz one byte is 8 bits long - we need to read 16 bits
+	_, err = file.Read(headerBytes)
+	if err != nil {
+		return
+	}
+
+	headerBuffer := bytes.NewBuffer(headerBytes)
+	// convert to big endian
+	err = binary.Read(headerBuffer, binary.BigEndian, &origin)
+	if err != nil {
+		return
+	}
+	log.Printf("Origin memory located: 0x%04X", origin)
+
+	var size int64 = stats.Size()
+	byteArr := make([]byte, size)
+
+	log.Printf("Creating memory buffer: %d bytes", size)
+
+	_, err = file.Read(byteArr)
+	if err != nil {
+		return
+	}
+
+	buffer := bytes.NewBuffer(byteArr)
+
+	// read into mem
 }
 
 func main() {
@@ -237,6 +279,23 @@ func main() {
 				for ok := true; ok; ok = (chr != 0x0) {
 					chr = memory[address+i] & 0xFFFF
 					fmt.Printf("%c", rune(chr))
+					i++
+				}
+			case TRAP_PUTSP:
+				address := reg[R_R0]
+				for i := uint16(0); ; i++ {
+					chr := memory[address+i]
+					if chr == 0 {
+						break
+					}
+
+					char1 := chr & 0xFF
+					fmt.Printf("%c", rune(char1))
+
+					char2 := chr >> 8
+					if char2 != 0 {
+						fmt.Printf("%c", rune(char2))
+					}
 					i++
 				}
 			case TRAP_IN:
