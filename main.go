@@ -5,11 +5,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"golang.org/x/sys/windows"
 	"log"
 	"math"
 	"os"
-	"syscall"
+	"sync"
 )
 
 // consts
@@ -72,6 +71,7 @@ const ( // memory mapped registers - they allow the system to 'sleep' while wait
 var (
 	memory = make([]uint16, MEMORY_MAX) // a 65,536 sized empty array
 	reg    = [R_COUNT]uint16{}
+	mutex  sync.Mutex
 )
 
 func updateFlags(r uint16) {
@@ -93,17 +93,19 @@ func signExtend(x uint16, bitCount int) uint16 {
 }
 
 func memRead(address uint16) uint16 {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if address == MR_KBSR {
 		if peekChar() {
-			char := make([]byte, 1)
 			reader := bufio.NewReader(os.Stdin)
-			n, err := reader.Read(char)
-			if n == 0 || err != nil {
+			char, err := reader.ReadByte()
+			if err != nil {
 				panic("couldn't read from I/O")
 			}
 
 			memory[MR_KBSR] = (1 << 15)
-			memory[MR_KBDR] = uint16(char[0])
+			memory[MR_KBDR] = uint16(char)
 		} else {
 			memory[MR_KBSR] = 0
 		}
