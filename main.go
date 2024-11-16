@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/eiannone/keyboard"
 	"log"
 	"math"
 	"os"
@@ -97,12 +97,14 @@ func memRead(address uint16) uint16 {
 	defer mutex.Unlock()
 
 	if address == MR_KBSR {
-		if peekChar() {
-			reader := bufio.NewReader(os.Stdin)
-			char, err := reader.ReadByte()
-			if err != nil {
-				panic("couldn't read from I/O")
-			}
+		char, _, err := keyboard.GetKey()
+		if err == nil {
+			// reader := bufio.NewReader(os.Stdin)
+			// char, err := reader.ReadByte()
+			// if err != nil {
+			// 	panic("couldn't read from I/O")
+			// }
+			// char, _,err := keyboard.GetKey()
 
 			memory[MR_KBSR] = (1 << 15)
 			memory[MR_KBDR] = uint16(char)
@@ -127,11 +129,11 @@ func memWrite(address uint16, value uint16) {
 	}
 }
 
-func peekChar() bool {
-	reader := bufio.NewReader(os.Stdin)
-	_, err := reader.Peek(1)
-	return err == nil
-}
+// func peekChar() bool {
+// 	// reader := bufio.NewReader(os.Stdin)
+// 	// _, err := reader.Peek(1)
+// 	// return err == nil
+// }
 
 func readImage(path string) bool {
 	file, err := os.Open(path)
@@ -186,6 +188,11 @@ func readImage(path string) bool {
 
 // main function  
 func main() {
+	if err := keyboard.Open(); err != nil {
+		log.Fatal(err)
+	}
+	defer keyboard.Close()
+
 	args := os.Args
 	if len(args) < 2 {
 		// show usage string
@@ -305,8 +312,12 @@ func main() {
 
 			switch instr & 0xFF {
 			case TRAP_GETC:
-				reader := bufio.NewReader(os.Stdin)
-				char, _, err := reader.ReadRune()
+				// reader := bufio.NewReader(os.Stdin)
+				// char, _, err := reader.ReadRune()
+				// if err != nil {
+				// 	panic("tried reading entered char, failed")
+				// }
+				char, _, err := keyboard.GetKey()
 				if err != nil {
 					panic("tried reading entered char, failed")
 				}
@@ -343,8 +354,12 @@ func main() {
 				}
 			case TRAP_IN:
 				fmt.Println("Enter character: ")
-				reader := bufio.NewReader(os.Stdin)
-				char, _, err := reader.ReadRune()
+				// reader := bufio.NewReader(os.Stdin)
+				// char, _, err := reader.ReadRune()
+				// if err != nil {
+				// 	panic("tried reading entered char, failed")
+				// }
+				char, _, err := keyboard.GetKey()
 				if err != nil {
 					panic("tried reading entered char, failed")
 				}
